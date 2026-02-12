@@ -1,0 +1,34 @@
+{
+  "openapi": "3.0.0",
+  "paths": {},
+  "info": {
+    "title": "Product Service",
+    "description": "Per-tenant product catalog (HTTP uses TenantMiddleware). TCP for Gateway.",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [
+    {
+      "url": "https://aero.darmist.com/backend",
+      "description": "Production Server"
+    },
+    {
+      "url": "http://localhost:3501",
+      "description": "Local Development"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http",
+        "name": "Authorization",
+        "description": "Use a valid **access token**.\n\nFormat: `Bearer <ACCESS_TOKEN>`",
+        "in": "header"
+      }
+    },
+    "schemas": {}
+  }
+}

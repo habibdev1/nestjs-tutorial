@@ -1,0 +1,63 @@
+{
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "resolvePackageJsonExports": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2023",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "incremental": true,
+    "skipLibCheck": true,
+    "strictNullChecks": true,
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "noFallthroughCasesInSwitch": false,
+    "paths": {
+      "@app/auth-lib": [
+        "libs/auth-lib/src"
+      ],
+      "@app/auth-lib/*": [
+        "libs/auth-lib/src/*"
+      ],
+      "@app/common-lib": [
+        "libs/common-lib/src"
+      ],
+      "@app/common-lib/*": [
+        "libs/common-lib/src/*"
+      ],
+      "@app/database-lib": [
+        "libs/database-lib/src"
+      ],
+      "@app/database-lib/*": [
+        "libs/database-lib/src/*"
+      ],
+      "@app/email-lib": [
+        "libs/email-lib/src"
+      ],
+      "@app/email-lib/*": [
+        "libs/email-lib/src/*"
+      ],
+      "@app/logger-lib": [
+        "libs/logger-lib/src"
+      ],
+      "@app/logger-lib/*": [
+        "libs/logger-lib/src/*"
+      ],
+      "@app/redis-lib": [
+        "libs/redis-lib/src"
+      ],
+      "@app/redis-lib/*": [
+        "libs/redis-lib/src/*"
+      ]
+    }
+  }
+}

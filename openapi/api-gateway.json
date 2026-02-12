@@ -1,0 +1,3051 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "ApiGatewayController_root",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "ApiGateway"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "ApiGatewayController_health",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "ApiGateway"
+        ]
+      }
+    },
+    "/gateway/auth/signup": {
+      "post": {
+        "description": "\nRegisters a new user under the provided **tenant** environment.\n\n### 🧩 Flow\n1. Validates **x-tenant-id** (must be provided in header).  \n2. Creates a new user with securely hashed password.  \n3. Automatically sends a **welcome email** (non-blocking).  \n4. Handles duplicate or validation errors gracefully.\n\n### ⚠️ Important Notes\n- The **x-tenant-id** header is mandatory to associate the user with the correct tenant.\n- Duplicate username/email/mobile entries will be rejected.\n- Passwords are securely hashed before storage.\n",
+        "operationId": "AuthGatewayController_signup",
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "User signup details",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignupDto"
+              },
+              "examples": {
+                "validExample": {
+                  "summary": "Example signup request",
+                  "value": {
+                    "name": "John Doe",
+                    "username": "johndoe",
+                    "email": "john@example.com",
+                    "password": "MySecurePassword@123",
+                    "mobile": "01712345678"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Account successfully created under tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Your account has been created successfully. You can now log in to your AeroStitch workspace.",
+                    "data": {
+                      "status": "success",
+                      "code": "USER_CREATED",
+                      "data": {
+                        "id": "uuid",
+                        "name": "John Doe",
+                        "username": "johndoe",
+                        "email": "john@example.com",
+                        "role": "user"
+                      }
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (e.g., invalid email or weak password)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Signup failed due to invalid or missing information. Please review your inputs.",
+                    "data": {
+                      "status": "error",
+                      "code": "VALIDATION_FAILED",
+                      "message": "Password must be at least 6 characters"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Duplicate username/email/mobile detected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Signup failed: Some information already exists in the system. Please use different values.",
+                    "data": {
+                      "status": "error",
+                      "code": "DUPLICATE_ENTRY",
+                      "message": "Duplicate fields: email \"john@example.com\""
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error during signup",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Signup failed due to a system error. Please try again later.",
+                    "data": {
+                      "status": "error",
+                      "code": "INTERNAL_ERROR",
+                      "error": "Database connection lost"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "User Signup (Tenant-Aware Registration)",
+        "tags": [
+          "AuthGateway"
+        ]
+      }
+    },
+    "/gateway/auth/login": {
+      "post": {
+        "description": "\nInitiates the **OTP-based login flow** by validating credentials and sending a one-time password to the user’s registered email.\n\n### 🧩 Flow\n1. Validate tenant connection using **x-tenant-id** header.  \n2. Find user by **username/email/mobile**.  \n3. Verify password and account status.  \n4. Generate OTP (5-minute validity).  \n5. Send OTP via email.\n\n### ⚠️ Important Notes\n- This endpoint **does not log the user in immediately** — it sends an OTP for the next verification step.\n- Locked or suspended users cannot proceed.\n",
+        "operationId": "AuthGatewayController_login",
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "User credentials for login",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              },
+              "examples": {
+                "validExample": {
+                  "summary": "Example login request",
+                  "value": {
+                    "usernameOrEmailOrMobile": "john.doe@example.com",
+                    "password": "MySecurePassword@123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP successfully sent to registered email",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "A verification OTP has been sent to your registered email address. Please check your inbox.",
+                    "data": {
+                      "status": "success",
+                      "code": "OTP_SENT",
+                      "data": {
+                        "loginId": "f5b2e8c3-8f4a-4a9c-9eab-8b23d67c2337",
+                        "channel": "email",
+                        "maskedEmail": "j***@example.com"
+                      }
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid tenant or missing header",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Login failed: Tenant environment is not initialized. Please retry after selecting the correct workspace.",
+                    "data": {
+                      "status": "error",
+                      "code": "TENANT_CONNECTION_MISSING",
+                      "details": {
+                        "tenantId": "tenant_12345"
+                      }
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials, locked account, or wrong password",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "example": {
+                        "message": "Invalid credentials. Please check your username, email, or mobile number and try again.",
+                        "data": {
+                          "status": "error",
+                          "code": "INVALID_CREDENTIALS",
+                          "field": "usernameOrEmailOrMobile"
+                        },
+                        "ts": "2025-10-11T12:30:45.123Z"
+                      }
+                    },
+                    {
+                      "example": {
+                        "message": "Your account is currently locked. Please check your email for unlock instructions or contact support.",
+                        "data": {
+                          "status": "error",
+                          "code": "ACCOUNT_LOCKED",
+                          "email": "john.doe@example.com"
+                        },
+                        "ts": "2025-10-11T12:30:45.123Z"
+                      }
+                    },
+                    {
+                      "example": {
+                        "message": "Incorrect password. Please try again or reset your password if forgotten.",
+                        "data": {
+                          "status": "error",
+                          "code": "INVALID_PASSWORD",
+                          "field": "password"
+                        },
+                        "ts": "2025-10-11T12:30:45.123Z"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "System or email failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "example": {
+                        "message": "We could not send the OTP to your email at this moment. Please try again later.",
+                        "data": {
+                          "status": "error",
+                          "code": "OTP_SEND_FAILED",
+                          "error": "SMTP connection timeout"
+                        },
+                        "ts": "2025-10-11T12:30:45.123Z"
+                      }
+                    },
+                    {
+                      "example": {
+                        "message": "Login failed due to a system error. Please try again later.",
+                        "data": {
+                          "status": "error",
+                          "code": "INTERNAL_ERROR",
+                          "error": "Database connection lost"
+                        },
+                        "ts": "2025-10-11T12:30:45.123Z"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "summary": "User Login (Initiate OTP-based authentication)",
+        "tags": [
+          "AuthGateway"
+        ]
+      }
+    },
+    "/gateway/auth/login/verify": {
+      "post": {
+        "description": "\nVerifies the OTP and issues **access and refresh tokens** for session-based authentication.\n\n### 🧩 Flow\n1. Validate tenant via **x-tenant-id** header.  \n2. Verify the OTP against the stored reference.  \n3. Issue **JWT tokens** (access & refresh).  \n4. Record session information.  \n5. Return tokens and user details.\n",
+        "operationId": "AuthGatewayController_verifyOtp",
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "OTP verification payload",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyOtpDto"
+              },
+              "examples": {
+                "validExample": {
+                  "summary": "Example request",
+                  "value": {
+                    "loginId": "8bfbec7f-3a2f-4d1f-a8e2-92ef1d2f3b77",
+                    "otp": "123456"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP verified and tokens issued successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "You have successfully logged in to AeroStitch.",
+                    "data": {
+                      "status": "success",
+                      "code": "LOGIN_SUCCESS",
+                      "data": {
+                        "accessToken": "jwt-access-token",
+                        "refreshToken": "jwt-refresh-token",
+                        "sessionId": "uuid",
+                        "user": {
+                          "id": "uuid",
+                          "username": "johndoe",
+                          "role": "user"
+                        }
+                      }
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Tenant missing or invalid environment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "OTP verification failed: Tenant environment not initialized. Please retry.",
+                    "data": {
+                      "status": "error",
+                      "code": "TENANT_CONNECTION_MISSING",
+                      "details": {
+                        "tenantId": "tenant_abc"
+                      }
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "OTP invalid, expired, or mismatched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "example": {
+                        "message": "Your OTP has expired or is invalid. Please request a new OTP to continue.",
+                        "data": {
+                          "status": "error",
+                          "code": "OTP_EXPIRED_OR_INVALID",
+                          "loginId": "8bfbec7f-3a2f-4d1f-a8e2-92ef1d2f3b77"
+                        },
+                        "ts": "2025-10-11T12:30:45.123Z"
+                      }
+                    },
+                    {
+                      "example": {
+                        "message": "Incorrect OTP entered. Please check and try again.",
+                        "data": {
+                          "status": "error",
+                          "code": "INVALID_OTP",
+                          "field": "otp"
+                        },
+                        "ts": "2025-10-11T12:30:45.123Z"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected system error during OTP verification",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Login verification failed due to an unexpected system error. Please try again later.",
+                    "data": {
+                      "status": "error",
+                      "code": "INTERNAL_ERROR",
+                      "error": "Redis connection lost"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Verify OTP and issue JWT tokens",
+        "tags": [
+          "AuthGateway"
+        ]
+      }
+    },
+    "/gateway/auth/unlock": {
+      "get": {
+        "description": "\nUnlocks a user account using a token received via email after too many failed login attempts.\n\n### 🧩 Flow\n1. User receives an **unlock link** through email after repeated login failures.  \n2. The link contains a **token** (e.g., `https://yourapp.com/api/auth/unlock?token=abc123`).  \n3. The token is verified in Redis; if valid, the user account is unlocked and can log in again.  \n4. The unlock token is **deleted** immediately after successful verification.\n\n### ⚠️ Notes\n- The **x-tenant-id** header must always be provided.\n- The token expires automatically after a set duration (e.g., 30 minutes).\n- If the token is invalid, expired, or reused, an appropriate error response is returned.\n",
+        "operationId": "AuthGatewayController_unlock",
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "token",
+            "required": true,
+            "in": "query",
+            "description": "Unlock token from the email link",
+            "schema": {
+              "example": "df81b3e2-58d4-4a55-9b70-1fbd45a9f02e",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account unlocked successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Your account has been unlocked successfully. You may now log in again.",
+                    "data": {
+                      "userId": "user_uuid",
+                      "tenantId": "tenant_abc"
+                    },
+                    "meta": {
+                      "status": "success",
+                      "code": "ACCOUNT_UNLOCKED"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid, expired, or incomplete unlock token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "example": {
+                        "message": "The unlock link is invalid or has expired. Please request a new unlock email.",
+                        "data": null,
+                        "meta": {
+                          "status": "error",
+                          "code": "INVALID_OR_EXPIRED_TOKEN"
+                        },
+                        "ts": "2025-10-11T12:30:45.123Z"
+                      }
+                    },
+                    {
+                      "example": {
+                        "message": "Unlock request failed due to incomplete token data. Please generate a new unlock link.",
+                        "data": null,
+                        "meta": {
+                          "status": "error",
+                          "code": "TOKEN_DATA_INCOMPLETE"
+                        },
+                        "ts": "2025-10-11T12:30:45.123Z"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error during unlock process",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Account unlock failed due to a system error. Please try again later.",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "INTERNAL_ERROR",
+                      "error": "Redis connection lost"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Unlock Account (via Email Token)",
+        "tags": [
+          "AuthGateway"
+        ]
+      }
+    },
+    "/gateway/auth/sessions": {
+      "get": {
+        "description": "\nRetrieves all **active sessions** for the currently authenticated user.\n\n### 🧩 Flow\n1. Requires a valid **JWT access token** (Bearer Auth).  \n2. Identifies the user and fetches their **active sessions** from the tenant database.  \n3. Returns session metadata such as device, IP, and timestamps.  \n\n### ⚠️ Notes\n- The **x-tenant-id** header must always be provided.\n- Each session represents a unique login (device/browser).\n- Users can have multiple active sessions concurrently.\n",
+        "operationId": "AuthGatewayController_sessions",
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of active sessions for the authenticated user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Active login sessions retrieved successfully.",
+                    "data": [
+                      {
+                        "sessionId": "c2a8d1d5-6b91-4c77-a4e0-8b5dfb4dc7a9",
+                        "deviceName": "Chrome on MacBook",
+                        "ip": "192.168.1.10",
+                        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)...",
+                        "createdAt": "2025-09-18T12:34:56.000Z",
+                        "lastSeen": "2025-09-18T13:00:00.000Z"
+                      },
+                      {
+                        "sessionId": "f87c9e32-3df2-45a4-bb2d-0a1c3c8f3f41",
+                        "deviceName": "iPhone Safari",
+                        "ip": "172.20.15.23",
+                        "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)...",
+                        "createdAt": "2025-09-19T09:15:22.000Z",
+                        "lastSeen": "2025-09-19T10:02:14.000Z"
+                      }
+                    ],
+                    "meta": {
+                      "status": "success",
+                      "code": "SESSIONS_RETRIEVED"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing tenant ID or invalid user context",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "example": {
+                        "message": "Unable to fetch sessions because tenant environment is not initialized.",
+                        "data": null,
+                        "meta": {
+                          "status": "error",
+                          "code": "TENANT_CONNECTION_MISSING",
+                          "details": {
+                            "tenantId": "tenant_abc"
+                          }
+                        },
+                        "ts": "2025-10-11T12:30:45.123Z"
+                      }
+                    },
+                    {
+                      "example": {
+                        "message": "Session request failed: user identity missing in the request payload.",
+                        "data": null,
+                        "meta": {
+                          "status": "error",
+                          "code": "USER_ID_MISSING"
+                        },
+                        "ts": "2025-10-11T12:30:45.123Z"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error while fetching user sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Failed to retrieve sessions due to a system error. Please try again later.",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "INTERNAL_ERROR",
+                      "error": "Database connection lost"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List Active User Sessions",
+        "tags": [
+          "AuthGateway"
+        ]
+      }
+    },
+    "/gateway/auth/logout/session": {
+      "post": {
+        "description": "\nRevokes a specific user session identified by its **sessionId**.\n\n### 🧩 Flow\n1. Requires a valid **JWT access token** (Bearer Auth).  \n2. The **sessionId** (UUID) of the target session must be provided.  \n3. The specified session will be removed from the user's active sessions list.  \n4. A success response is returned if the session is successfully revoked.\n\n### ⚠️ Notes\n- The **x-tenant-id** header must be provided.\n- If the session is already logged out or not found, a relevant message is returned.\n- This does **not** affect other active sessions.\n",
+        "operationId": "AuthGatewayController_logoutSession",
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Payload containing the sessionId to revoke",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogoutSessionDto"
+              },
+              "examples": {
+                "validExample": {
+                  "summary": "Example logout request",
+                  "value": {
+                    "sessionId": "b9f7f3d3-3a6e-4f34-bc23-8490dfdf1234"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Session revoked successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Session has been revoked successfully.",
+                    "data": {
+                      "sessionId": "b9f7f3d3-3a6e-4f34-bc23-8490dfdf1234"
+                    },
+                    "meta": {
+                      "status": "success",
+                      "code": "SESSION_REVOKED"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing tenant ID or user identity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "example": {
+                        "message": "Logout failed because tenant environment is not initialized.",
+                        "data": null,
+                        "meta": {
+                          "status": "error",
+                          "code": "TENANT_CONNECTION_MISSING",
+                          "details": {
+                            "tenantId": "tenant_abc"
+                          }
+                        },
+                        "ts": "2025-10-11T12:30:45.123Z"
+                      }
+                    },
+                    {
+                      "example": {
+                        "message": "Logout request missing user identity.",
+                        "data": null,
+                        "meta": {
+                          "status": "error",
+                          "code": "USER_ID_MISSING"
+                        },
+                        "ts": "2025-10-11T12:30:45.123Z"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Session not found or already logged out",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Session not found or already logged out.",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "SESSION_NOT_FOUND",
+                      "details": {
+                        "sessionId": "b9f7f3d3-3a6e-4f34-bc23-8490dfdf1234"
+                      }
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error while revoking session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Logout failed due to a system error. Please try again later.",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "INTERNAL_ERROR",
+                      "error": "Database update failed"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Logout a Single Active Session",
+        "tags": [
+          "AuthGateway"
+        ]
+      }
+    },
+    "/gateway/auth/logout/all": {
+      "post": {
+        "description": "\nRevokes **all active user sessions** for the authenticated user.\n",
+        "operationId": "AuthGatewayController_logoutAll",
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "All sessions revoked successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "All sessions have been revoked successfully.",
+                    "data": {
+                      "revokedCount": 3
+                    },
+                    "meta": {
+                      "status": "success",
+                      "code": "ALL_SESSIONS_REVOKED"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing tenant ID or invalid user context",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "example": {
+                        "message": "Unable to perform logout-all because tenant environment is not initialized.",
+                        "data": null,
+                        "meta": {
+                          "status": "error",
+                          "code": "TENANT_CONNECTION_MISSING",
+                          "details": {
+                            "tenantId": "tenant_abc"
+                          }
+                        },
+                        "ts": "2025-10-11T12:30:45.123Z"
+                      }
+                    },
+                    {
+                      "example": {
+                        "message": "Logout-all request missing user identity.",
+                        "data": null,
+                        "meta": {
+                          "status": "error",
+                          "code": "USER_ID_MISSING"
+                        },
+                        "ts": "2025-10-11T12:30:45.123Z"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error during logout-all operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Logout-all failed due to a system error. Please try again later.",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "INTERNAL_ERROR",
+                      "error": "Database connection lost"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Logout All Active Sessions",
+        "tags": [
+          "AuthGateway"
+        ]
+      }
+    },
+    "/gateway/auth/refresh": {
+      "post": {
+        "description": "\nRotates and issues a new **access token** and **refresh token** when the current access token has expired.\n",
+        "operationId": "AuthGatewayController_refresh",
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Payload containing refresh token for rotation",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshDto"
+              },
+              "examples": {
+                "validExample": {
+                  "summary": "Example refresh request",
+                  "value": {
+                    "refreshToken": "existing-jwt-refresh-token"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tokens refreshed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Access and refresh tokens have been renewed successfully.",
+                    "data": {
+                      "accessToken": "new-jwt-access-token",
+                      "refreshToken": "new-jwt-refresh-token"
+                    },
+                    "meta": {
+                      "status": "success",
+                      "code": "TOKENS_REFRESHED"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing tenant ID or invalid payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Token refresh failed because tenant environment is not initialized.",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "TENANT_CONNECTION_MISSING",
+                      "details": {
+                        "tenantId": "tenant_abc"
+                      }
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired refresh token or session mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "example": {
+                        "message": "The provided refresh token is invalid or has expired. Please log in again.",
+                        "data": null,
+                        "meta": {
+                          "status": "error",
+                          "code": "INVALID_REFRESH_TOKEN"
+                        },
+                        "ts": "2025-10-11T12:30:45.123Z"
+                      }
+                    },
+                    {
+                      "example": {
+                        "message": "Session not found or expired. Please log in again.",
+                        "data": null,
+                        "meta": {
+                          "status": "error",
+                          "code": "SESSION_NOT_FOUND",
+                          "details": {
+                            "sessionId": "uuid"
+                          }
+                        },
+                        "ts": "2025-10-11T12:30:45.123Z"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error while refreshing tokens",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Token refresh failed due to a system error. Please try again later.",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "INTERNAL_ERROR",
+                      "error": "Redis connection lost"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Refresh Access and Refresh Tokens",
+        "tags": [
+          "AuthGateway"
+        ]
+      }
+    },
+    "/gateway/auth/change-role": {
+      "post": {
+        "description": "\nAllows an **admin** to update another user's role within the same tenant environment.\n",
+        "operationId": "AuthGatewayController_changeUserRole",
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Payload to update a user’s role",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "example": "f9b6de24-1f5d-4b55-b50e-1fab249bb552",
+                    "description": "User ID to update role for"
+                  },
+                  "newRole": {
+                    "type": "string",
+                    "example": "admin",
+                    "description": "New role to assign (e.g., user, manager, admin)"
+                  }
+                },
+                "required": [
+                  "userId",
+                  "newRole"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User role updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "User role has been updated successfully.",
+                    "data": {
+                      "id": "uuid",
+                      "username": "johndoe",
+                      "email": "john@example.com",
+                      "previousRole": "user",
+                      "newRole": "admin"
+                    },
+                    "meta": {
+                      "status": "success",
+                      "code": "USER_ROLE_UPDATED"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "User not found or tenant connection missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "example": {
+                        "message": "Role update failed because tenant environment is not initialized.",
+                        "data": null,
+                        "meta": {
+                          "status": "error",
+                          "code": "TENANT_CONNECTION_MISSING",
+                          "details": {
+                            "tenantId": "tenant_abc"
+                          }
+                        },
+                        "ts": "2025-10-11T12:30:45.123Z"
+                      }
+                    },
+                    {
+                      "example": {
+                        "message": "No user found with the provided identifier. Please verify and try again.",
+                        "data": null,
+                        "meta": {
+                          "status": "error",
+                          "code": "USER_NOT_FOUND",
+                          "details": {
+                            "userId": "f9b6de24-1f5d-4b55-b50e-1fab249bb552"
+                          }
+                        },
+                        "ts": "2025-10-11T12:30:45.123Z"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "User lacks admin privileges",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Access denied: Admin role required to change user roles.",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "FORBIDDEN"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error during role update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Role update failed due to a system error. Please try again later.",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "INTERNAL_ERROR",
+                      "error": "Database write conflict"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Change User Role (Admin Only)",
+        "tags": [
+          "AuthGateway"
+        ]
+      }
+    },
+    "/gateway/auth/me": {
+      "get": {
+        "description": "\nReturns the currently authenticated user's profile information based on the access token.  \nThis endpoint extracts the JWT access token from the request header and fetches the user's latest details from the database through the Auth microservice.\n    ",
+        "operationId": "AuthGatewayController_getCurrentUser",
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Current user retrieved successfully.",
+                    "data": {
+                      "id": "66a0a2f47b85d048ae5b11d2",
+                      "username": "john.doe",
+                      "name": "John Doe",
+                      "email": "john@example.com",
+                      "mobile": "+8801711111111",
+                      "role": "admin",
+                      "tenantId": "aero1",
+                      "sessionId": "f67a1c5d-59ea-4322-8edb-ff1815b1f38e",
+                      "lastLoginAt": "2025-10-25T15:42:10.125Z",
+                      "createdAt": "2025-01-10T12:30:45.123Z",
+                      "updatedAt": "2025-10-25T15:42:10.125Z"
+                    },
+                    "meta": {
+                      "status": "success",
+                      "code": "CURRENT_USER_OK"
+                    },
+                    "ts": "2025-10-26T13:05:00.235Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing tenant ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "x-tenant-id is required",
+                    "error": "Bad Request",
+                    "statusCode": 400
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or expired access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Invalid or expired access token.",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "INVALID_ACCESS_TOKEN"
+                    },
+                    "ts": "2025-10-26T13:05:00.235Z"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error occurred while retrieving current user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Failed to retrieve current user.",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "INTERNAL_ERROR",
+                      "error": "Database connection lost"
+                    },
+                    "ts": "2025-10-26T13:05:00.235Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get Current User Profile",
+        "tags": [
+          "AuthGateway"
+        ]
+      }
+    },
+    "/gateway/tenants": {
+      "post": {
+        "operationId": "TenantGatewayController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTenantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TenantGateway"
+        ]
+      },
+      "get": {
+        "operationId": "TenantGatewayController_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TenantGateway"
+        ]
+      }
+    },
+    "/gateway/tenants/{id}": {
+      "get": {
+        "operationId": "TenantGatewayController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TenantGateway"
+        ]
+      },
+      "patch": {
+        "operationId": "TenantGatewayController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTenantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TenantGateway"
+        ]
+      },
+      "delete": {
+        "operationId": "TenantGatewayController_softDelete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TenantGateway"
+        ]
+      }
+    },
+    "/gateway/tenants/by-name/{name}": {
+      "get": {
+        "operationId": "TenantGatewayController_findByName",
+        "parameters": [
+          {
+            "name": "name",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TenantGateway"
+        ]
+      }
+    },
+    "/gateway/tenants/{id}/status": {
+      "patch": {
+        "operationId": "TenantGatewayController_changeStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TenantGateway"
+        ]
+      }
+    },
+    "/gateway/tenants/by-name/{name}/status": {
+      "patch": {
+        "operationId": "TenantGatewayController_changeStatusByName",
+        "parameters": [
+          {
+            "name": "name",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TenantGateway"
+        ]
+      },
+      "get": {
+        "operationId": "TenantGatewayController_getStatusByName",
+        "parameters": [
+          {
+            "name": "name",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TenantGateway"
+        ]
+      }
+    },
+    "/gateway/tenants/validate/{name}": {
+      "get": {
+        "operationId": "TenantGatewayController_validateTenant",
+        "parameters": [
+          {
+            "name": "name",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "TenantGateway"
+        ]
+      }
+    },
+    "/gateway/products": {
+      "post": {
+        "description": "\nCreates a new **product record** within a tenant's catalog.  \nOnly users with **manager** or **admin** roles are authorized.\n\n### 🧩 Flow\n1. Requires a valid **JWT token** and **x-tenant-id** header.  \n2. Accepts full product details such as SKU, slug, name, price, category, etc.  \n3. Automatically records creator and updater metadata.  \n4. Clears all product-related caches for the tenant after creation.\n\n### ⚠️ Notes\n- Product **slug** and **SKU** must be unique per tenant.  \n- Creation automatically logs metadata for auditing (createdBy, updatedBy).  \n- Cached product lists are invalidated after successful creation.\n",
+        "operationId": "ProductGatewayController_create",
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductDto"
+              },
+              "examples": {
+                "validExample": {
+                  "summary": "Example product creation request",
+                  "value": {
+                    "name": "Formal Cotton Shirt",
+                    "sku": "SHIRT-001",
+                    "slug": "formal-cotton-shirt",
+                    "category": "SHIRTS",
+                    "price": 59.99,
+                    "currency": "USD",
+                    "description": "A premium cotton shirt for office wear.",
+                    "stock": 100,
+                    "images": [
+                      "https://cdn.example.com/products/shirt-001-front.jpg",
+                      "https://cdn.example.com/products/shirt-001-back.jpg"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Product created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Product has been created successfully.",
+                    "data": {
+                      "_id": "uuid",
+                      "name": "Formal Cotton Shirt",
+                      "sku": "SHIRT-001",
+                      "slug": "formal-cotton-shirt",
+                      "category": "SHIRTS",
+                      "price": 59.99,
+                      "stock": 100,
+                      "createdBy": "manager.jane",
+                      "createdAt": "2025-10-11T12:30:45.123Z"
+                    },
+                    "meta": {
+                      "status": "success",
+                      "code": "PRODUCT_CREATED"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing tenant ID or invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "x-tenant-id is required",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "TENANT_ID_MISSING"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid JWT access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Unauthorized: Missing or invalid access token",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "UNAUTHORIZED"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "User does not have required manager/admin role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Access denied: Insufficient role privileges",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "FORBIDDEN"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Duplicate SKU or slug",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "example": {
+                        "message": "Product slug already exists. Please choose another.",
+                        "data": null,
+                        "meta": {
+                          "status": "error",
+                          "code": "DUPLICATE_SLUG"
+                        },
+                        "ts": "2025-10-11T12:30:45.123Z"
+                      }
+                    },
+                    {
+                      "example": {
+                        "message": "Product SKU already exists. Please use a unique SKU.",
+                        "data": null,
+                        "meta": {
+                          "status": "error",
+                          "code": "DUPLICATE_SKU"
+                        },
+                        "ts": "2025-10-11T12:30:45.123Z"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error during product creation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Failed to create product due to an internal error.",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "INTERNAL_ERROR",
+                      "error": "Database write failure"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create Product (Manager/Admin)",
+        "tags": [
+          "ProductGateway"
+        ]
+      },
+      "get": {
+        "description": "\nRetrieves a **paginated and filterable** list of products.  \nThis endpoint is **public**, meaning no authentication is required.\n\n### 🧩 Flow\n1. Requires the **x-tenant-id** header to identify which tenant's catalog to query.  \n2. Supports **pagination**, **search**, **sorting**, and **status-based filtering**.  \n3. Uses **Redis caching** to speed up repeated queries.  \n4. Returns products along with pagination metadata.\n\n### ⚙️ Query Parameters\n| Parameter | Type | Description | Example |\n|------------|------|-------------|----------|\n| q | string | Search keyword (matches name, description, SKU, etc.) | shirt |\n| page | number | Page number (default: 1) | 1 |\n| pageSize | number | Number of results per page (default: 10) | 10 |\n| sort | string | Sort by field (e.g., price:asc, createdAt:desc) | createdAt:desc |\n| status | string | Filter by status (e.g., PUBLISHED, DRAFT) | PUBLISHED |\n\n### ⚠️ Notes\n- Cached responses are valid for a limited time (TTL-based).  \n- Results are sorted and paginated efficiently using MongoDB indices.  \n- Intended for **storefronts, search results, and product listing pages**.\n",
+        "operationId": "ProductGatewayController_list",
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (1-based)",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "description": "Page size (max 100)",
+            "schema": {
+              "example": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Search text",
+            "schema": {
+              "example": "shirt",
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filter by status",
+            "schema": {
+              "example": "PUBLISHED",
+              "type": "string"
+            }
+          },
+          {
+            "name": "categoryId",
+            "required": false,
+            "in": "query",
+            "description": "Filter by category id",
+            "schema": {
+              "example": "CAT-001",
+              "type": "string"
+            }
+          },
+          {
+            "name": "minPrice",
+            "required": false,
+            "in": "query",
+            "description": "Minimum price",
+            "schema": {
+              "example": 500,
+              "type": "number"
+            }
+          },
+          {
+            "name": "maxPrice",
+            "required": false,
+            "in": "query",
+            "description": "Maximum price",
+            "schema": {
+              "example": 5000,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort: field:asc|desc",
+            "schema": {
+              "example": "createdAt:desc",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of products returned successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Products fetched successfully.",
+                    "data": [
+                      {
+                        "_id": "uuid",
+                        "name": "Formal Cotton Shirt",
+                        "sku": "SHIRT-001",
+                        "slug": "formal-cotton-shirt",
+                        "price": 59.99,
+                        "category": "SHIRTS",
+                        "stock": 120,
+                        "status": "PUBLISHED",
+                        "createdAt": "2025-10-09T12:45:30.123Z"
+                      },
+                      {
+                        "_id": "uuid",
+                        "name": "Slim Fit Trousers",
+                        "sku": "PANT-002",
+                        "slug": "slim-fit-trousers",
+                        "price": 69.99,
+                        "category": "PANTS",
+                        "stock": 90,
+                        "status": "PUBLISHED",
+                        "createdAt": "2025-10-08T14:20:10.456Z"
+                      }
+                    ],
+                    "meta": {
+                      "total": 2,
+                      "page": 1,
+                      "pageSize": 10,
+                      "totalPages": 1,
+                      "status": "success",
+                      "code": "PRODUCTS_FETCHED"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing tenant ID or invalid query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "x-tenant-id is required",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "TENANT_ID_MISSING"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error while fetching product list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Failed to fetch product list due to an internal error.",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "INTERNAL_ERROR",
+                      "error": "Redis connection failed"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "List Products (Public, Paginated)",
+        "tags": [
+          "ProductGateway"
+        ]
+      }
+    },
+    "/gateway/products/check-sku/{sku}": {
+      "get": {
+        "description": "\nChecks whether a **product SKU** is already in use under the specified tenant.\n\n### 🧩 Flow\n1. Validates **x-tenant-id** (must be provided in header).  \n2. Checks the SKU against the tenant's product database.  \n3. Returns availability status.\n\n### ⚠️ Important Notes\n- The **x-tenant-id** header is mandatory to identify the tenant environment.\n- If the SKU already exists, the endpoint will return a clear error message.\n- This does **not** reserve the SKU — it only checks existence.\n",
+        "operationId": "ProductGatewayController_checkSkuAvailability",
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sku",
+            "required": true,
+            "in": "path",
+            "description": "Product SKU to check availability for",
+            "schema": {
+              "example": "SKU-12345",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SKU is available",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "This SKU is available.",
+                    "data": {
+                      "status": "success",
+                      "code": "SKU_AVAILABLE",
+                      "data": {
+                        "available": true
+                      }
+                    },
+                    "ts": "2025-10-13T14:00:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing tenant ID or invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "x-tenant-id is required",
+                    "statusCode": 400,
+                    "error": "Bad Request"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "SKU already taken",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "This SKU is already in use.",
+                    "data": {
+                      "status": "error",
+                      "code": "SKU_TAKEN",
+                      "data": {
+                        "available": false
+                      }
+                    },
+                    "ts": "2025-10-13T14:00:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error during SKU check",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "SKU check failed due to a system error. Please try again later.",
+                    "data": {
+                      "status": "error",
+                      "code": "INTERNAL_ERROR",
+                      "error": "Database connection lost"
+                    },
+                    "ts": "2025-10-13T14:00:00.000Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Check Product SKU Availability (Tenant-Aware)",
+        "tags": [
+          "ProductGateway"
+        ]
+      }
+    },
+    "/gateway/products/check-slug/{slug}": {
+      "get": {
+        "description": "\nChecks whether a **product slug** is already in use under the specified tenant.\n\n### 🧩 Flow\n1. Validates **x-tenant-id** (must be provided in header).  \n2. Checks the slug against the tenant's product database.  \n3. Returns availability status.\n\n### ⚠️ Important Notes\n- The **x-tenant-id** header is mandatory to identify the tenant environment.\n- If the slug already exists, the endpoint will return a clear error message.\n- This does **not** reserve the slug — it only checks existence.\n",
+        "operationId": "ProductGatewayController_checkSlugAvailability",
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "description": "Product slug to check availability for",
+            "schema": {
+              "example": "new-summer-shirt",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Slug is available",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "This product slug is available.",
+                    "data": {
+                      "status": "success",
+                      "code": "SLUG_AVAILABLE",
+                      "data": {
+                        "available": true
+                      }
+                    },
+                    "ts": "2025-10-13T14:00:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing tenant ID or invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "x-tenant-id is required",
+                    "statusCode": 400,
+                    "error": "Bad Request"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Slug already taken",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "This product slug is already in use.",
+                    "data": {
+                      "status": "error",
+                      "code": "SLUG_TAKEN",
+                      "data": {
+                        "available": false
+                      }
+                    },
+                    "ts": "2025-10-13T14:00:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error during slug check",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Slug check failed due to a system error. Please try again later.",
+                    "data": {
+                      "status": "error",
+                      "code": "INTERNAL_ERROR",
+                      "error": "Database connection lost"
+                    },
+                    "ts": "2025-10-13T14:00:00.000Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Check Product Slug Availability (Tenant-Aware)",
+        "tags": [
+          "ProductGateway"
+        ]
+      }
+    },
+    "/gateway/products/{id}": {
+      "get": {
+        "description": "\nFetches detailed information for a single **product record** based on its unique ID.  \nThis endpoint is **public**, requiring no authentication.\n\n### 🧩 Flow\n1. Requires **x-tenant-id** header to identify the tenant database.  \n2. Retrieves the product details by ID.  \n3. Uses **Redis caching** to optimize performance for frequent lookups.  \n4. Returns full product details including pricing, images, and metadata.\n\n### ⚠️ Notes\n- Cached data is refreshed every few minutes (TTL-based).  \n- Deleted or unpublished products are excluded.  \n- Suitable for product detail pages and public APIs.\n",
+        "operationId": "ProductGatewayController_getById",
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Unique product identifier (UUID or Mongo ObjectId)",
+            "schema": {
+              "example": "66f1b0b1a2345c9b1b234567",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product details retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Product fetched successfully.",
+                    "data": {
+                      "_id": "66f1b0b1a2345c9b1b234567",
+                      "name": "Classic Linen Shirt",
+                      "sku": "SHIRT-004",
+                      "slug": "classic-linen-shirt",
+                      "price": 79.99,
+                      "currency": "USD",
+                      "category": "SHIRTS",
+                      "stock": 50,
+                      "status": "PUBLISHED",
+                      "description": "Premium linen shirt for summer collection.",
+                      "images": [
+                        "https://cdn.example.com/products/shirt-004-front.jpg",
+                        "https://cdn.example.com/products/shirt-004-back.jpg"
+                      ],
+                      "createdAt": "2025-10-09T12:45:30.123Z"
+                    },
+                    "meta": {
+                      "status": "success",
+                      "code": "PRODUCT_FETCHED"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing tenant ID or invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "x-tenant-id is required",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "TENANT_ID_MISSING"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Product not found or deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Product not found.",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "PRODUCT_NOT_FOUND",
+                      "id": "66f1b0b1a2345c9b1b234567"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server or database error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Failed to fetch product due to an internal error.",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "INTERNAL_ERROR",
+                      "error": "MongoDB connection timeout"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get Product by ID (Public)",
+        "tags": [
+          "ProductGateway"
+        ]
+      },
+      "patch": {
+        "description": "\nUpdates an existing **product record** within the tenant catalog.  \nOnly users with **manager** or **admin** roles are authorized.\n\n### 🧩 Flow\n1. Requires a valid **JWT token** and **x-tenant-id** header.  \n2. Finds the product by its **ID** and applies the provided updates.  \n3. Updates metadata fields (`updatedBy`, `updatedAt`).  \n4. Clears all cached product data for the tenant after successful update.\n\n### ⚠️ Notes\n- Partial updates are supported.  \n- Duplicate **slug** or **SKU** values are not allowed.  \n- All updates are logged for audit purposes.\n",
+        "operationId": "ProductGatewayController_update",
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Unique product identifier (UUID)",
+            "schema": {
+              "example": "b3a1f2d4-569c-4a11-b25a-6f3c2b28c1c7",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Fields to update in the product",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductDto"
+              },
+              "examples": {
+                "validExample": {
+                  "summary": "Example update request",
+                  "value": {
+                    "name": "Slim Fit Cotton Shirt",
+                    "price": 64.99,
+                    "stock": 80,
+                    "description": "Updated product description with new pricing."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Product updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Product has been updated successfully.",
+                    "data": {
+                      "_id": "b3a1f2d4-569c-4a11-b25a-6f3c2b28c1c7",
+                      "name": "Slim Fit Cotton Shirt",
+                      "sku": "SHIRT-001",
+                      "slug": "slim-fit-cotton-shirt",
+                      "price": 64.99,
+                      "stock": 80,
+                      "updatedBy": "manager.jane",
+                      "updatedAt": "2025-10-11T12:30:45.123Z"
+                    },
+                    "meta": {
+                      "status": "success",
+                      "code": "PRODUCT_UPDATED"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing tenant ID or invalid request body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "x-tenant-id is required",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "TENANT_ID_MISSING"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid JWT access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Unauthorized: Missing or invalid access token",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "UNAUTHORIZED"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "User lacks manager/admin privileges",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Access denied: Insufficient role privileges",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "FORBIDDEN"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Product not found or deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Product not found.",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "PRODUCT_NOT_FOUND",
+                      "id": "b3a1f2d4-569c-4a11-b25a-6f3c2b28c1c7"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Duplicate SKU or slug during update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "example": {
+                        "message": "Product slug already exists.",
+                        "data": null,
+                        "meta": {
+                          "status": "error",
+                          "code": "DUPLICATE_SLUG"
+                        },
+                        "ts": "2025-10-11T12:30:45.123Z"
+                      }
+                    },
+                    {
+                      "example": {
+                        "message": "Product SKU already exists.",
+                        "data": null,
+                        "meta": {
+                          "status": "error",
+                          "code": "DUPLICATE_SKU"
+                        },
+                        "ts": "2025-10-11T12:30:45.123Z"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error while updating product",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Failed to update product due to an internal error.",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "INTERNAL_ERROR",
+                      "error": "MongoDB validation error"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update Product (Manager/Admin)",
+        "tags": [
+          "ProductGateway"
+        ]
+      },
+      "delete": {
+        "description": "\nAllows an **admin** to archive (soft delete) a product.  \nThe product remains in the database but marked as deleted.\n\n### 🧩 Flow\n1. Requires **JWT token** and **x-tenant-id** header.  \n2. Updates `deleted` flag and sets status to `ARCHIVED`.  \n3. Clears all cache for consistency.\n\n### ⚠️ Notes\n- Deleted products will not appear in listings.\n- Action is **irreversible** from the public API.\n",
+        "operationId": "ProductGatewayController_softDelete",
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Product ID",
+            "schema": {
+              "example": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product archived successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Product has been archived successfully.",
+                    "data": {
+                      "id": "uuid",
+                      "deleted": true
+                    },
+                    "meta": {
+                      "status": "success",
+                      "code": "PRODUCT_ARCHIVED"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing tenant ID or invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "x-tenant-id is required",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "TENANT_ID_MISSING"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Product not found or deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Product not found.",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "PRODUCT_NOT_FOUND",
+                      "id": "uuid"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error during product deletion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Failed to delete product due to an internal error.",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "INTERNAL_ERROR",
+                      "error": "MongoDB connection lost"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Soft Delete Product (Admin)",
+        "tags": [
+          "ProductGateway"
+        ]
+      }
+    },
+    "/gateway/products/slug/{slug}": {
+      "get": {
+        "description": "\nFetches detailed product information based on its **slug**.  \nThis endpoint is **public** and does not require authentication.\n\n### 🧩 Flow\n1. Requires the **x-tenant-id** header to identify the tenant catalog.  \n2. Searches for the product by its slug.  \n3. Uses **Redis caching** for faster subsequent lookups.  \n4. Returns full product details including name, price, description, and images.\n\n### ⚠️ Notes\n- Cached results are valid for a limited TTL period.  \n- Deleted or unpublished products are excluded.  \n- Ideal for product detail pages on storefronts.\n",
+        "operationId": "ProductGatewayController_getBySlug",
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "description": "Unique product slug used for public display URLs",
+            "schema": {
+              "example": "tailored-shirt",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product details retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Product fetched successfully.",
+                    "data": {
+                      "_id": "uuid",
+                      "name": "Tailored Cotton Shirt",
+                      "slug": "tailored-shirt",
+                      "sku": "TSHIRT-101",
+                      "price": 79.99,
+                      "currency": "USD",
+                      "category": "SHIRTS",
+                      "stock": 50,
+                      "status": "PUBLISHED",
+                      "description": "Perfectly tailored cotton shirt for formal occasions.",
+                      "images": [
+                        "https://cdn.example.com/products/tailored-shirt-front.jpg",
+                        "https://cdn.example.com/products/tailored-shirt-back.jpg"
+                      ],
+                      "createdAt": "2025-10-09T12:45:30.123Z"
+                    },
+                    "meta": {
+                      "status": "success",
+                      "code": "PRODUCT_FETCHED"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing tenant header or invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "x-tenant-id is required",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "TENANT_ID_MISSING"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Product not found or deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Product not found.",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "PRODUCT_NOT_FOUND",
+                      "slug": "tailored-shirt"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error while fetching product by slug",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Failed to fetch product due to an internal error.",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "INTERNAL_ERROR",
+                      "error": "Redis connection timeout"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get Product by Slug (Public)",
+        "tags": [
+          "ProductGateway"
+        ]
+      }
+    },
+    "/gateway/products/{id}/status": {
+      "patch": {
+        "description": "\nAllows **manager** or **admin** to change the status of a product.  \nStatuses may include: `PUBLISHED`, `DRAFT`, or `ARCHIVED`.\n\n### 🧩 Flow\n1. Requires **JWT token** and **x-tenant-id** header.  \n2. Updates only the status field and logs the actor.  \n3. Clears cached data for consistency.\n\n### ⚠️ Notes\n- Commonly used to toggle product visibility.\n- All status updates are recorded with metadata.\n",
+        "operationId": "ProductGatewayController_changeStatus",
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Product ID",
+            "schema": {
+              "example": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "example": "PUBLISHED"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Product status updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Product status has been updated successfully.",
+                    "data": {
+                      "id": "uuid",
+                      "status": "PUBLISHED"
+                    },
+                    "meta": {
+                      "status": "success",
+                      "code": "PRODUCT_STATUS_UPDATED"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing tenant ID or invalid request body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "x-tenant-id is required",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "TENANT_ID_MISSING"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Product not found or deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Product not found.",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "PRODUCT_NOT_FOUND",
+                      "id": "uuid"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error while updating product status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Failed to update product status due to an internal error.",
+                    "data": null,
+                    "meta": {
+                      "status": "error",
+                      "code": "INTERNAL_ERROR",
+                      "error": "MongoDB connection lost"
+                    },
+                    "ts": "2025-10-11T12:30:45.123Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Change Product Status (Manager/Admin)",
+        "tags": [
+          "ProductGateway"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "API Gateway",
+    "description": "Public HTTP entrypoint routing to microservices (TCP).",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [
+    {
+      "url": "https://aero.darmist.com/backend",
+      "description": "Production Server"
+    },
+    {
+      "url": "http://localhost:3501",
+      "description": "Local Development"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http",
+        "name": "Authorization",
+        "description": "Use a valid **access token**.\n\nFormat: `Bearer <ACCESS_TOKEN>`",
+        "in": "header"
+      }
+    },
+    "schemas": {
+      "SignupDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "LoginDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "VerifyOtpDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "LogoutSessionDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "RefreshDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "CreateTenantDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "UpdateTenantDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "ChangeStatusDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "CustomOptionDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "example": "color",
+            "description": "Option key (internal identifier)"
+          },
+          "label": {
+            "type": "string",
+            "example": "Color",
+            "description": "Human-readable label"
+          },
+          "value": {
+            "type": "string",
+            "example": "blue",
+            "description": "Option value"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "value"
+        ]
+      },
+      "CreateProductDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Tailored Shirt",
+            "description": "Human-readable product name"
+          },
+          "slug": {
+            "type": "string",
+            "example": "tailored-shirt",
+            "description": "URL-friendly unique slug"
+          },
+          "sku": {
+            "type": "string",
+            "example": "SKU-001",
+            "description": "External/internal SKU, unique per tenant DB"
+          },
+          "garment": {
+            "type": "string",
+            "enum": [
+              "SHIRT",
+              "PANT",
+              "JACKET",
+              "SUIT",
+              "WAISTCOAT",
+              "BLAZER",
+              "OVERCOAT",
+              "SKIRT",
+              "DRESS"
+            ],
+            "example": "SHIRT",
+            "description": "Garment type/code"
+          },
+          "description": {
+            "type": "string",
+            "example": "Slim fit cotton shirt",
+            "description": "Product description"
+          },
+          "tags": {
+            "example": [
+              "formal",
+              "slim-fit"
+            ],
+            "description": "Product tags",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "basePrice": {
+            "type": "number",
+            "example": 1290,
+            "description": "Base price in SEK (Swedish Krona)"
+          },
+          "stockQuantity": {
+            "type": "number",
+            "example": 100,
+            "description": "Available stock quantity"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "PUBLISHED",
+              "ARCHIVED"
+            ],
+            "default": "DRAFT",
+            "description": "Product lifecycle status"
+          },
+          "images": {
+            "example": [
+              "https://cdn.site.com/img1.png"
+            ],
+            "description": "Image URLs",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "customOptions": {
+            "description": "Custom product options",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CustomOptionDto"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "slug",
+          "sku",
+          "garment",
+          "basePrice"
+        ]
+      },
+      "UpdateProductDto": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  }
+}
