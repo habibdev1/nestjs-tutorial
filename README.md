@@ -63,8 +63,8 @@ Before you begin, ensure you have the following installed:
 
 1.  **Clone the repository:**
     ```bash
-    git clone git@git.darmist.com:open-source-projects/nestjs_tutorial.git
-    cd nestjs_tutorial
+    git clone git@github.com:habibdev1/nestjs-tutorial.git
+    cd nestjs-tutorial
     ```
 2.  **Install dependencies:**
     ```bash
